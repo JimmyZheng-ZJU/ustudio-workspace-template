@@ -121,7 +121,11 @@ export function setViewer(v: any): void {
 export function flyToObject(idOrName: string, options?: FlyToBoxOptions): void {
   const viewer = ensureViewer();
   const obj = resolveObject(idOrName);
-  viewer.controls.flyToObject(obj, options);
+  try {
+    viewer.controls.flyToObject(obj, options);
+  } catch (e) {
+    console.warn(`[ustudio/facade] flyToObject("${idOrName}") failed (empty bounding box?):`, e);
+  }
 }
 
 /** 飞向指定位置和朝向 */
@@ -396,7 +400,12 @@ export function removeLight(id: string): void {
 /** 截图并返回 base64 数据 */
 export async function screenshot(options?: ScreenshotOptions): Promise<string> {
   const viewer = ensureViewer();
-  return viewer.screenshot(options);
+  const result = await viewer.screenshot(options);
+  // 始终返回完整 data URL，不管底层返回的是 data URL 还是 raw base64
+  if (typeof result === 'string' && result.startsWith('data:')) {
+    return result;
+  }
+  return `data:image/png;base64,${result}`;
 }
 
 /** 获取底层 Viewer 实例（escape hatch，谨慎使用） */
