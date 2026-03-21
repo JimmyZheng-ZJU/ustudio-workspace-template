@@ -21,25 +21,36 @@ agent: CodeActAgent
 4. **永远不要使用 `import {...} from 'three'`。** 如果确实需要 Three.js 类型，使用 `import {...} from 'three/webgpu'`。
 5. **永远不要修改 `vite.config.ts`、`main.tsx`、`package.json`。** 构建配置和入口文件由平台管理。
 
-### UI 布局规则（必须遵守）
+### UI 布局规则（CRITICAL — 必须遵守）
 
-3D 场景渲染在页面底层（`#scene-container`, z-index: 0），React UI 叠加在上层（`#root`, z-index: 1）。因此：
+3D 场景在底层，React UI 叠加在上层。`#root` 已设置 `pointer-events: none`，所以：
 
-1. **页面最外层容器的 background 必须是 transparent**，不能用不透明颜色或渐变，否则会完全遮挡 3D 场景
-2. 面板、工具栏等 UI 组件使用 **半透明背景**（如 `rgba(0,20,40,0.85)`），让 3D 场景透过空隙可见
-3. 使用 `position: fixed` 定位 UI 面板，不要占满整个屏幕
-4. 中间区域留白给 3D 场景，UI 面板只占据边缘位置（左侧/右侧/顶部/底部）
+1. **页面最外层容器 background 必须是 transparent**，不能用不透明颜色
+2. **每个需要交互的面板必须单独设置 `pointerEvents: 'auto'`**，否则按钮无法点击
+3. 面板只占边缘位置，中间留给 3D 场景
+4. **不要用一个 div 铺满整个屏幕（`inset: 0`）来包裹所有面板**，这会挡住 3D 交互
 
 ```tsx
-// ✅ 正确：透明背景 + 边缘面板
+// ✅ 正确：每个面板独立定位，各自设 pointerEvents: 'auto'
 <>
-  <div style={{ position: 'fixed', left: 16, top: 16, width: 280, background: 'rgba(0,20,40,0.85)', borderRadius: 12, padding: 16 }}>
-    面板内容
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 60, background: 'rgba(0,20,40,0.9)', pointerEvents: 'auto' }}>
+    工具栏
+  </div>
+  <div style={{ position: 'fixed', left: 16, top: 80, width: 140, background: 'rgba(0,20,40,0.9)', borderRadius: 12, padding: 16, pointerEvents: 'auto' }}>
+    左面板
+  </div>
+  <div style={{ position: 'fixed', right: 16, top: 80, width: 320, background: 'rgba(0,20,40,0.9)', borderRadius: 12, padding: 16, pointerEvents: 'auto' }}>
+    右面板
+  </div>
+  <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 50, background: 'rgba(0,20,40,0.9)', pointerEvents: 'auto' }}>
+    状态栏
   </div>
 </>
 
-// ❌ 错误：不透明背景挡住 3D
-<div style={{ position: 'fixed', inset: 0, background: '#0a0e17' }}>
+// ❌ 错误：外层容器铺满屏幕挡住 3D
+<div style={{ position: 'fixed', inset: 0, background: 'transparent' }}>
+  <header>...</header>
+  <aside>...</aside>
 </div>
 ```
 
