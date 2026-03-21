@@ -61,37 +61,40 @@ export interface ScreenshotOptions {
 let _viewer: any = null;
 let _lightManager: any = null;
 
-function ensureViewer(): any {
+function ensureViewer(): any | null {
   if (!_viewer) {
-    throw new Error(
-      '[ustudio/facade] Viewer 尚未初始化。请确保 SceneProvider 已完成加载。'
-    );
+    console.warn('[ustudio/facade] Viewer 尚未初始化，操作被跳过。');
+    return null;
   }
   return _viewer;
 }
 
-function getMaterialEffects(): any {
+function getMaterialEffects(): any | null {
   const ME = (window as any).__MaterialEffects;
   if (!ME) {
-    throw new Error('[ustudio/facade] MaterialEffects 未就绪。');
+    console.warn('[ustudio/facade] MaterialEffects 未就绪，操作被跳过。');
+    return null;
   }
   return ME;
 }
 
-function ensureLightManager(): any {
+function ensureLightManager(): any | null {
   const viewer = ensureViewer();
+  if (!viewer) return null;
   if (!_lightManager) {
     const LM = (window as any).__LightManager;
     if (!LM) {
-      throw new Error('[ustudio/facade] LightManager 未就绪。');
+      console.warn('[ustudio/facade] LightManager 未就绪，操作被跳过。');
+      return null;
     }
     _lightManager = new LM(viewer.scene);
   }
   return _lightManager;
 }
 
-function resolveObject(idOrName: string): any {
+function resolveObject(idOrName: string): any | null {
   const viewer = ensureViewer();
+  if (!viewer) return null;
   let obj = viewer.objectManager.getById(idOrName);
   if (!obj) {
     const set = viewer.objectManager.getByName(idOrName);
@@ -100,9 +103,8 @@ function resolveObject(idOrName: string): any {
     }
   }
   if (!obj) {
-    throw new Error(
-      `[ustudio/facade] 找不到对象: "${idOrName}"。请检查 ID 或名称是否正确。`
-    );
+    console.warn(`[ustudio/facade] 找不到对象: "${idOrName}"。`);
+    return null;
   }
   return obj;
 }
@@ -120,11 +122,13 @@ export function setViewer(v: any): void {
 /** 飞向指定对象（通过 ID 或名称） */
 export function flyToObject(idOrName: string, options?: FlyToBoxOptions): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   const obj = resolveObject(idOrName);
+  if (!obj) return;
   try {
     viewer.controls.flyToObject(obj, options);
   } catch (e) {
-    console.warn(`[ustudio/facade] flyToObject("${idOrName}") failed (empty bounding box?):`, e);
+    console.warn(`[ustudio/facade] flyToObject("${idOrName}") failed:`, e);
   }
 }
 
@@ -135,50 +139,58 @@ export function flyToPosition(
   options?: FlyToOptions
 ): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.controls.flyTo(position, target, options);
 }
 
 /** 切换 2D / 3D 视图模式 */
 export function setViewMode(mode: '2d' | '3d'): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.controls.setViewMode(mode);
 }
 
 /** 锁定相机，禁止用户交互 */
 export function lockCamera(): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.controls.lock();
 }
 
 /** 解锁相机，恢复用户交互 */
 export function unlockCamera(): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.controls.unlock();
 }
 
 /** 获取当前相机视角信息 */
-export function getCameraViewpoint(): CameraViewpoint {
+export function getCameraViewpoint(): CameraViewpoint | null {
   const viewer = ensureViewer();
+  if (!viewer) return null;
   return viewer.controls.getCameraViewpoint();
 }
 
 /** 设置相机视角 */
 export function setCameraViewpoint(viewpoint: CameraViewpoint): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.controls.setCameraViewpoint(viewpoint);
 }
 
 // ─── 对象查询 ────────────────────────────────────────────────────────────────
 
 /** 通过 ID 获取单个对象 */
-export function getObjectById(id: string): any {
+export function getObjectById(id: string): any | undefined {
   const viewer = ensureViewer();
+  if (!viewer) return undefined;
   return viewer.objectManager.getById(id);
 }
 
 /** 通过名称模糊查询对象列表 */
 export function getObjectsByName(name: string): any[] {
   const viewer = ensureViewer();
+  if (!viewer) return [];
   const set = viewer.objectManager.getByName(name);
   return set ? Array.from(set) : [];
 }
@@ -186,6 +198,7 @@ export function getObjectsByName(name: string): any[] {
 /** 通过类型查询对象列表 */
 export function getObjectsByType(type: string): any[] {
   const viewer = ensureViewer();
+  if (!viewer) return [];
   const set = viewer.objectManager.getByType(type);
   return set ? Array.from(set) : [];
 }
@@ -193,13 +206,15 @@ export function getObjectsByType(type: string): any[] {
 /** 获取场景中所有对象 */
 export function getAllObjects(): any[] {
   const viewer = ensureViewer();
+  if (!viewer) return [];
   const set = viewer.objectManager.getAll();
   return set ? Array.from(set) : [];
 }
 
 /** 获取对象或整个场景的包围盒 */
-export function getBoundingBox(id?: string): any {
+export function getBoundingBox(id?: string): any | null {
   const viewer = ensureViewer();
+  if (!viewer) return null;
   return viewer.objectManager.getBoundingBox(id);
 }
 
@@ -208,51 +223,79 @@ export function getBoundingBox(id?: string): any {
 /** 高亮指定对象 */
 export function highlight(idOrName: string, options?: HighlightOptions): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   const obj = resolveObject(idOrName);
-  getMaterialEffects().highlightColor(obj, options);
+  if (!obj) return;
+  const ME = getMaterialEffects();
+  if (!ME) return;
+  ME.highlightColor(obj, options);
   viewer.render();
 }
 
 /** 移除对象高亮 */
 export function removeHighlight(idOrName: string): void {
   const obj = resolveObject(idOrName);
-  getMaterialEffects().removeHighlightColor(obj);
-  ensureViewer().render();
+  if (!obj) return;
+  const ME = getMaterialEffects();
+  if (!ME) return;
+  ME.removeHighlightColor(obj);
+  const viewer = ensureViewer();
+  if (viewer) viewer.render();
 }
 
 /** 对象呼吸灯效果 */
 export function breathe(idOrName: string, options?: BreatheOptions): void {
   const obj = resolveObject(idOrName);
-  getMaterialEffects().breatheColor(obj, options);
-  ensureViewer().render();
+  if (!obj) return;
+  const ME = getMaterialEffects();
+  if (!ME) return;
+  ME.breatheColor(obj, options);
+  const viewer = ensureViewer();
+  if (viewer) viewer.render();
 }
 
 /** 移除呼吸灯效果 */
 export function removeBreathe(idOrName: string): void {
   const obj = resolveObject(idOrName);
-  getMaterialEffects().removeBreatheColor(obj);
-  ensureViewer().render();
+  if (!obj) return;
+  const ME = getMaterialEffects();
+  if (!ME) return;
+  ME.removeBreatheColor(obj);
+  const viewer = ensureViewer();
+  if (viewer) viewer.render();
 }
 
 /** 淡入显示对象 */
 export function fadeIn(idOrName: string, options?: FadeOptions): void {
   const obj = resolveObject(idOrName);
-  getMaterialEffects().fadeIn(obj, options);
-  ensureViewer().render();
+  if (!obj) return;
+  const ME = getMaterialEffects();
+  if (!ME) return;
+  ME.fadeIn(obj, options);
+  const viewer = ensureViewer();
+  if (viewer) viewer.render();
 }
 
 /** 淡出隐藏对象 */
 export function fadeOut(idOrName: string, options?: FadeOptions): void {
   const obj = resolveObject(idOrName);
-  getMaterialEffects().fadeOut(obj, options);
-  ensureViewer().render();
+  if (!obj) return;
+  const ME = getMaterialEffects();
+  if (!ME) return;
+  ME.fadeOut(obj, options);
+  const viewer = ensureViewer();
+  if (viewer) viewer.render();
 }
 
 /** 切换线框模式 */
 export function wireframe(idOrName: string, enabled?: boolean): void {
   const obj = resolveObject(idOrName);
-  getMaterialEffects().wireframe(obj, enabled);
-  ensureViewer().render();
+  if (!obj) return;
+  const ME = getMaterialEffects();
+  if (!ME) return;
+  ME.wireframe(obj, enabled);
+  const viewer = ensureViewer();
+  if (viewer) viewer.render();
 }
 
 // ─── 可见性 ──────────────────────────────────────────────────────────────────
@@ -260,30 +303,35 @@ export function wireframe(idOrName: string, enabled?: boolean): void {
 /** 显示指定对象 */
 export function show(id: string): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.objectManager.show(id);
 }
 
 /** 隐藏指定对象 */
 export function hide(id: string): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.objectManager.hide(id);
 }
 
 /** 隔离显示指定对象（隐藏其他所有） */
 export function isolate(ids: string[]): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.objectManager.isolate(ids);
 }
 
 /** 显示所有对象 */
 export function showAll(): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.objectManager.showAll();
 }
 
 /** 设置对象透明度 */
 export function setOpacity(id: string, opacity: number): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.objectManager.setOpacity(id, opacity);
 }
 
@@ -295,6 +343,7 @@ export function onClick(
   callback: (event: MouseEvent) => void
 ): void {
   const obj = resolveObject(idOrName);
+  if (!obj) return;
   obj.addEventListener('click', (e: any) => callback(e.event));
 }
 
@@ -304,6 +353,7 @@ export function onDblClick(
   callback: (event: MouseEvent) => void
 ): void {
   const obj = resolveObject(idOrName);
+  if (!obj) return;
   obj.addEventListener('dblclick', (e: any) => callback(e.event));
 }
 
@@ -314,8 +364,10 @@ export function onHover(
   leaveCallback: (event: MouseEvent) => void
 ): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.interactionManager.pointerMoveEventsEnabled = true;
   const obj = resolveObject(idOrName);
+  if (!obj) return;
   obj.addEventListener('pointerenter', (e: any) => enterCallback(e.event));
   obj.addEventListener('pointerleave', (e: any) => leaveCallback(e.event));
 }
@@ -327,6 +379,7 @@ export function removeEventListener(
   callback: Function
 ): void {
   const obj = resolveObject(idOrName);
+  if (!obj) return;
   obj.removeEventListener(type, callback as EventListener);
 }
 
@@ -339,6 +392,7 @@ export function addCssLabel(
   options: { position: IVector3; content: string; className?: string }
 ): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.cssRenderer.addLabel(id, options);
 }
 
@@ -346,6 +400,7 @@ export function addCssLabel(
 // TODO: 待验证 viewer.cssRenderer.removeLabel API 是否存在
 export function removeCssLabel(id: string): void {
   const viewer = ensureViewer();
+  if (!viewer) return;
   viewer.cssRenderer.removeLabel(id);
 }
 
@@ -356,52 +411,59 @@ export function applyLightPreset(
   name: 'indoor' | 'outdoor' | 'studio' | 'warehouse'
 ): void {
   const lm = ensureLightManager();
+  if (!lm) return;
   lm.applyPreset(name);
 }
 
 /** 添加环境光 */
 export function addAmbientLight(id: string, options?: LightOptions): void {
   const lm = ensureLightManager();
+  if (!lm) return;
   lm.addAmbient(id, options);
 }
 
 /** 添加平行光 */
 export function addDirectionalLight(id: string, options?: LightOptions): void {
   const lm = ensureLightManager();
+  if (!lm) return;
   lm.addDirectional(id, options);
 }
 
 /** 添加点光源 */
 export function addPointLight(id: string, options?: LightOptions): void {
   const lm = ensureLightManager();
+  if (!lm) return;
   lm.addPoint(id, options);
 }
 
 /** 添加聚光灯 */
 export function addSpotLight(id: string, options?: LightOptions): void {
   const lm = ensureLightManager();
+  if (!lm) return;
   lm.addSpot(id, options);
 }
 
 /** 添加半球光 */
 export function addHemisphereLight(id: string, options?: LightOptions): void {
   const lm = ensureLightManager();
+  if (!lm) return;
   lm.addHemisphere(id, options);
 }
 
 /** 移除灯光 */
 export function removeLight(id: string): void {
   const lm = ensureLightManager();
+  if (!lm) return;
   lm.remove(id);
 }
 
 // ─── 工具 ────────────────────────────────────────────────────────────────────
 
-/** 截图并返回 base64 数据 */
+/** 截图并返回完整 data URL */
 export async function screenshot(options?: ScreenshotOptions): Promise<string> {
   const viewer = ensureViewer();
+  if (!viewer) return '';
   const result = await viewer.screenshot(options);
-  // 始终返回完整 data URL，不管底层返回的是 data URL 还是 raw base64
   if (typeof result === 'string' && result.startsWith('data:')) {
     return result;
   }
@@ -409,6 +471,6 @@ export async function screenshot(options?: ScreenshotOptions): Promise<string> {
 }
 
 /** 获取底层 Viewer 实例（escape hatch，谨慎使用） */
-export function getViewer(): any {
+export function getViewer(): any | null {
   return ensureViewer();
 }
