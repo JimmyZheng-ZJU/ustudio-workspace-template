@@ -32,6 +32,22 @@ cd /workspace/project/ustudio-workspace-template && npm install && nohup npx vit
 
 5. **getAllObjects() 在 viewer 就绪后返回真实数据**。不要因为在 headless 浏览器中测试时返回空数组就改用模拟数据。正确做法是在 useEffect 中检查 viewer（来自 ViewerContext）是否存在，存在时调用 getAllObjects()。
 
+### 页面组件必须使用 ViewerContext
+
+所有页面组件必须从 ViewerContext 获取 viewer，并在 viewer 未就绪时显示加载状态：
+```tsx
+const { viewer, loading, error } = useContext(ViewerContext);
+if (loading) return 加载中...;
+if (error) return 加载失败;
+// viewer 就绪后，getAllObjects/highlight/flyToObject 等 facade 函数才能正常工作
+```
+
+**绝对不要**：
+- 直接访问 `window.__viewer`
+- 手动调用 `setViewer()`
+- 用 setInterval 轮询 viewer
+- 因为 headless 浏览器看不到 3D 就认为 viewer 没初始化
+
 ---
 
 ## CRITICAL — 绝对禁止
