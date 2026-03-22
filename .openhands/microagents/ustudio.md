@@ -11,6 +11,17 @@ agent: CodeActAgent
 
 ---
 
+## 首次启动（每次新对话必须执行）
+
+如果 Vite dev server 尚未运行，请在执行任何其他操作之前先启动它：
+```bash
+cd /workspace/project/ustudio-workspace-template && npm install && nohup npx vite --host 0.0.0.0 --port 8011 > /tmp/vite.log 2>&1 & sleep 3 && echo "Vite started on port 8011"
+```
+
+启动后用户即可在应用面板中看到 3D 场景预览。之后再响应用户的业务需求。
+
+---
+
 ## CRITICAL — 绝对禁止
 
 > **以下规则不可违反，任何情况下都必须遵守。**
