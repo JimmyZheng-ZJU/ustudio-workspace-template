@@ -1,7 +1,9 @@
 #!/bin/bash
 echo "[ustudio] Running setup.sh..."
 
-# 如果 node_modules 不存在，执行 npm install
+cd /workspace/project/ustudio-workspace-template
+
+# 安装依赖
 if [ ! -d "node_modules" ]; then
   echo "[ustudio] Installing dependencies..."
   npm install
@@ -10,17 +12,9 @@ else
   echo "[ustudio] node_modules already exists, skipping install."
 fi
 
-# 确认关键文件存在
-if [ -f "src/core/facade.ts" ]; then
-  echo "[ustudio] Template verified: facade.ts exists"
-else
-  echo "[ustudio] WARNING: facade.ts not found!"
-fi
-
-if [ -f ".openhands/microagents/ustudio.md" ]; then
-  echo "[ustudio] Microagent verified: ustudio.md exists"
-else
-  echo "[ustudio] WARNING: ustudio.md not found!"
-fi
+# 后台启动 Vite dev server
+echo "[ustudio] Starting Vite dev server..."
+nohup npx vite --host 0.0.0.0 --port 8011 > /tmp/vite.log 2>&1 &
+echo "[ustudio] Vite dev server starting on port 8011 (background)"
 
 echo "[ustudio] Setup complete."
