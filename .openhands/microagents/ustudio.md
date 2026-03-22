@@ -407,6 +407,26 @@ export default function FloorSwitcher() {
 }
 ```
 
+### 场景对象层级（测试场景 test1）
+
+该场景是一个地铁站模型，对象层级如下：
+
+- **楼层 Group**（1F, 2F, 3F, 4F, 5F）：用 `getObjectsByName('1F')` 获取，`isolate` 可隔离显示
+- **空间 ExtrudeMesh**（Space_48, Space_93 等）：分布在各楼层下，共 46 个，可 `highlight` 高亮
+- **设备 Model**（在 `<构件>` Group 下各楼层里）：
+  - 1F: Escalator×4, 长椅, xiaohuoshuan02（灭火器）
+  - 2F: 闸机整体, 编组1, Escalator, 洗手间隔间, 售票机, HLWshoupiaoji, ZDCZshoupiaoji, zhaji（闸机）
+  - 3F: Escalator
+  - 4F: Escalator×2
+
+**设备查询方式**：用 `getObjectsByName('Escalator')` 或 `getObjectsByName('闸机整体')` 获取。注意同名设备可能有多个（如 Escalator 在多个楼层都有）。
+
+**监控面板建议布局**：
+- 左侧：楼层导航（isolate + flyToObject）
+- 中间上：设备列表（按楼层分组，显示 Model 类型对象，可高亮飞向）
+- 中间下或右侧：空间列表（Space 对象，可高亮）
+- 右下：告警中心（关联真实对象名称）
+
 ---
 
 ## 场景数据查询规范
