@@ -1,27 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>uStudio</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; overflow: hidden; }
-      #scene-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
-      #root { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #scene-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 0;
+      }
+      #root {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+      }
     </style>
     <script type="importmap">
-    {
-      "imports": {
-        "three": "/node_modules/three/build/three.webgpu.js",
-        "three/webgpu": "/node_modules/three/build/three.webgpu.js",
-        "three/tsl": "/node_modules/three/build/three.tsl.js",
-        "three/addons/": "/node_modules/three/examples/jsm/",
-        "camera-controls": "/node_modules/camera-controls/dist/camera-controls.module.js",
-        "u-space": "/node_modules/u-space/dist/index.js",
-        "u-space/plugins/u-manager": "/node_modules/u-space/dist/plugins/u-manager/index.js"
+      {
+        "imports": {
+          "three": "/node_modules/three/build/three.webgpu.js",
+          "three/src/": "/node_modules/three/src/",
+          "three/webgpu": "/node_modules/three/build/three.webgpu.js",
+          "three/tsl": "/node_modules/three/build/three.tsl.js",
+          "three/addons/": "/node_modules/three/examples/jsm/",
+          "three/examples/jsm/": "/node_modules/three/examples/jsm/",
+          "camera-controls": "/node_modules/camera-controls/dist/camera-controls.module.js",
+          "u-space": "/node_modules/u-space/dist/index.js",
+          "u-space/plugins/u-manager": "/node_modules/u-space/dist/plugins/u-manager/index.js",
+          "3d-tiles-renderer": "/node_modules/3d-tiles-renderer/build/index.three.js",
+          "3d-tiles-renderer/plugins": "/node_modules/3d-tiles-renderer/build/index.three-plugins.js",
+          "3d-tiles-renderer/src/": "/node_modules/3d-tiles-renderer/src/",
+          "@takram/three-geospatial": "/node_modules/@takram/three-geospatial/build/index.js",
+          "@takram/three-geospatial/webgpu": "/node_modules/@takram/three-geospatial/build/webgpu.js"
+        }
       }
-    }
     </script>
   </head>
   <body>
@@ -30,8 +58,9 @@
 
     <!-- 3D 场景初始化：绕过 Vite transform，用 importmap 原生加载 -->
     <script type="module">
-      import { Viewer, MaterialEffects, LightManager } from 'u-space';
+      import { Viewer, MaterialEffects, LightManager, TextureLoaderManager } from 'u-space';
       import { SceneLoader } from 'u-space/plugins/u-manager';
+      import { ArcgisTilesRenderer } from 'u-space/plugins/tiles';
 
       // 暴露给 facade.ts 使用（避免 Vite 打包 u-space）
       window.__MaterialEffects = MaterialEffects;
@@ -41,6 +70,10 @@
         const container = document.getElementById('scene-container');
         const viewer = new Viewer({ el: container });
         await viewer.init();
+
+        const hdrTexture = await TextureLoaderManager.loadAsyncHDR('/puresky_1k.hdr');
+        viewer.scene.environment = hdrTexture;
+        viewer.scene.background = hdrTexture;
 
         // 离线模式：从 public/scenes/demo/ 加载
         const loader = new SceneLoader(viewer);
@@ -54,9 +87,13 @@
         window.dispatchEvent(new CustomEvent('ustudio:viewer-ready', { detail: { viewer } }));
 
         console.log('[ustudio] Scene loaded, objects:', viewer.objectManager.size);
+
+        const arcgisTilesRenderer = new ArcgisTilesRenderer(viewer);
+        arcgisTilesRenderer.invalidate(120.002269, 30.284849, 4);
+        arcgisTilesRenderer.enable();
       }
 
-      initScene().catch(err => {
+      initScene().catch((err) => {
         console.error('[ustudio] Scene init failed:', err);
         window.dispatchEvent(new CustomEvent('ustudio:viewer-error', { detail: { error: err } }));
       });
