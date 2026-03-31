@@ -58,13 +58,12 @@
 
     <!-- 3D 场景初始化：绕过 Vite transform，用 importmap 原生加载 -->
     <script type="module">
-      import { Viewer, MaterialEffects, LightManager, TextureLoaderManager } from 'u-space';
+      import { Viewer, MaterialEffects, TextureLoaderManager } from 'u-space';
       import { SceneLoader } from 'u-space/plugins/u-manager';
       import { ArcgisTilesRenderer } from 'u-space/plugins/tiles';
 
       // 暴露给 facade.ts 使用（避免 Vite 打包 u-space）
       window.__MaterialEffects = MaterialEffects;
-      window.__LightManager = LightManager;
 
       async function initScene() {
         const container = document.getElementById('scene-container');

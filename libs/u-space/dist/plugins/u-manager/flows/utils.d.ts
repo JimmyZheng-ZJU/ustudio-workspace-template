@@ -1,0 +1,14 @@
+import type { Object3D } from 'three/webgpu';
+import type { Viewer } from 'u-space';
+import { FlowParser } from './FlowParser';
+import { Node } from './nodes';
+import type { NodeType } from './types';
+export declare function objectHandle<T>(objects: Object3D[] | Object3D, fn: (obj: Object3D) => T): T[] | T;
+export declare function sleep(ms: number): Promise<void>;
+export declare function parseNodeByType(parser: FlowParser, node: NodeType): Node;
+export declare function parseValue<T = any>(value: string): T;
+export declare function waitFor(fn: () => Promise<void>, wait: boolean): Promise<void>;
+export declare function getObjectByIds(viewer: Viewer, ids: string[]): Object3D[];
+export declare function getObjectById(viewer: Viewer, id: string, object?: Object3D): Object3D | null;
+export declare function getMeshByUserDataUuid(object: Object3D, uuid: string): Object3D | null;
+export declare function filterNodes(prevNode: Node, result: Node[]): Node[];

@@ -1,0 +1,67 @@
+{
+  "name": "u-space",
+  "version": "0.0.11",
+  "type": "module",
+  "types": "dist/src/index.d.ts",
+  "module": "dist/index.js",
+  "main": "dist/index.cjs",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./plugins/*": "./dist/plugins/*/index.js"
+  },
+  "typesVersions": {
+    "*": {
+      "plugins/*": [
+        "./dist/plugins/*/index.d.ts"
+      ]
+    }
+  },
+  "scripts": {
+    "build:dev": "vite build --mode development && tsc",
+    "build:u-space": "cross-env BUILD_TARGET=u-space vite build --mode development",
+    "build:plugins": "cross-env BUILD_TARGET=plugins vite build --mode development",
+    "build": "cross-env BUILD_TARGET=all vite build --mode production && tsc",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "docs:deploy": "pnpm docs:build && vercel --prod",
+    "release": "npm version patch && pnpm build && npm publish --access=public"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md",
+    "docs/*.md"
+  ],
+  "homepage": "https://u-space-phi.vercel.app",
+  "keywords": [
+    "u-space",
+    "space",
+    "3d",
+    "webgpu",
+    "threejs",
+    "three",
+    "camera-controls"
+  ],
+  "devDependencies": {
+    "@types/node-rsa": "^1.1.4",
+    "cross-env": "^10.1.0",
+    "crypto-browserify": "^3.12.1",
+    "node-rsa": "^1.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-node-polyfills": "^0.24.0",
+    "vitepress": "^1.6.4"
+  },
+  "peerDependencies": {
+    "3d-tiles-renderer": "^0.4.19",
+    "@takram/three-geospatial": "^0.6.0",
+    "@types/three": "^0.183.1",
+    "camera-controls": "^3.1.2",
+    "three": "^0.183.1"
+  }
+}
