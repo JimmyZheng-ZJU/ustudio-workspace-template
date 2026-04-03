@@ -12,14 +12,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://digit-ustudio-test01.bwton-console.cn/dt-ustudio-service',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false,
       },
-      '/nfs': {
-        target: 'https://digit-ustudio-test01.bwton-console.cn',
+      '/uploads': {
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false,
       },
     },
   },
