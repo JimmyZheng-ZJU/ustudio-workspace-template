@@ -49,14 +49,16 @@ useGongVueEvents((event) => {
 
 ## 后端 API
 
-模板预置了 Express + SQLite 后端（端口 3001）。
+模板预置了 Express + sql.js (纯 JS SQLite) 后端（端口 3001）。
+
+**重要：所有数据库操作都是 async 的，路由处理函数必须用 async/await。**
 
 ### 新建业务表
 
 在 `server/database.js` 的 `initDatabase()` 里加：
 
 ```javascript
-db.exec(`CREATE TABLE IF NOT EXISTS inspections (
+db.run(`CREATE TABLE IF NOT EXISTS inspections (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   space_id TEXT,
   status TEXT DEFAULT 'pending',
@@ -75,13 +77,13 @@ const { findAll, insert, update, remove } = require('../database');
 const { success, fail } = require('../response');
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  const result = findAll('inspections', { page: Number(req.query.page || 1) });
+router.get('/', async (req, res) => {
+  const result = await findAll('inspections', { page: Number(req.query.page || 1) });
   success(res, result.rows, 'success', result.total);
 });
 
-router.post('/', (req, res) => {
-  const item = insert('inspections', req.body);
+router.post('/', async (req, res) => {
+  const item = await insert('inspections', req.body);
   success(res, item);
 });
 

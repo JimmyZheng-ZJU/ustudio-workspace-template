@@ -1,21 +1,33 @@
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
+const fs = require('fs');
 const path = require('path');
 
 const DB_PATH = path.join(__dirname, 'app.db');
 let db;
 
-function getDb() {
+async function getDb() {
   if (!db) {
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
+    const SQL = await initSqlJs();
+    if (fs.existsSync(DB_PATH)) {
+      const buffer = fs.readFileSync(DB_PATH);
+      db = new SQL.Database(buffer);
+    } else {
+      db = new SQL.Database();
+    }
   }
   return db;
 }
 
-function initDatabase() {
-  const db = getDb();
-  db.exec(`CREATE TABLE IF NOT EXISTS operation_logs (
+function saveDb() {
+  if (db) {
+    const data = db.export();
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  }
+}
+
+async function initDatabase() {
+  const db = await getDb();
+  db.run(`CREATE TABLE IF NOT EXISTS operation_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     action TEXT NOT NULL,
     target_table TEXT,
@@ -23,50 +35,73 @@ function initDatabase() {
     detail TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+  saveDb();
   return db;
 }
 
-function createTable(name, columnsSql) {
-  getDb().exec(`CREATE TABLE IF NOT EXISTS ${name} (${columnsSql})`);
+async function createTable(name, columnsSql) {
+  const db = await getDb();
+  db.run(`CREATE TABLE IF NOT EXISTS ${name} (${columnsSql})`);
+  saveDb();
 }
 
-function insert(table, data) {
-  const db = getDb();
+async function insert(table, data) {
+  const db = await getDb();
   const keys = Object.keys(data);
   const placeholders = keys.map(() => '?').join(', ');
-  const stmt = db.prepare(`INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`);
-  const result = stmt.run(...keys.map(k => data[k]));
-  return { id: result.lastInsertRowid, ...data };
+  db.run(`INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`, keys.map(k => data[k]));
+  const result = db.exec('SELECT last_insert_rowid() as id');
+  const id = result[0]?.values[0]?.[0] || 0;
+  saveDb();
+  return { id, ...data };
 }
 
-function update(table, id, data) {
-  const db = getDb();
+async function update(table, id, data) {
+  const db = await getDb();
   const keys = Object.keys(data);
   const sets = keys.map(k => `${k} = ?`).join(', ');
-  db.prepare(`UPDATE ${table} SET ${sets} WHERE id = ?`).run(...keys.map(k => data[k]), id);
-  return findById(table, id);
+  db.run(`UPDATE ${table} SET ${sets} WHERE id = ?`, [...keys.map(k => data[k]), id]);
+  saveDb();
+  return await findById(table, id);
 }
 
-function remove(table, id) {
-  getDb().prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
+async function remove(table, id) {
+  const db = await getDb();
+  db.run(`DELETE FROM ${table} WHERE id = ?`, [id]);
+  saveDb();
 }
 
-function findById(table, id) {
-  return getDb().prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+async function findById(table, id) {
+  const db = await getDb();
+  const result = db.exec(`SELECT * FROM ${table} WHERE id = ?`, [id]);
+  if (!result[0] || !result[0].values[0]) return null;
+  const cols = result[0].columns;
+  const row = result[0].values[0];
+  return Object.fromEntries(cols.map((c, i) => [c, row[i]]));
 }
 
-function findAll(table, { page = 1, pageSize = 20, orderBy = 'id DESC', where = '', params = [] } = {}) {
-  const db = getDb();
+async function findAll(table, { page = 1, pageSize = 20, orderBy = 'id DESC', where = '', params = [] } = {}) {
+  const db = await getDb();
   const w = where ? `WHERE ${where}` : '';
-  const total = db.prepare(`SELECT COUNT(*) as count FROM ${table} ${w}`).get(...params).count;
+  const countResult = db.exec(`SELECT COUNT(*) as count FROM ${table} ${w}`, params);
+  const total = countResult[0]?.values[0]?.[0] || 0;
   const offset = (Math.max(1, page) - 1) * pageSize;
-  const rows = db.prepare(`SELECT * FROM ${table} ${w} ORDER BY ${orderBy} LIMIT ? OFFSET ?`).all(...params, pageSize, offset);
+  const result = db.exec(`SELECT * FROM ${table} ${w} ORDER BY ${orderBy} LIMIT ? OFFSET ?`, [...params, pageSize, offset]);
+  const rows = [];
+  if (result[0]) {
+    const cols = result[0].columns;
+    for (const row of result[0].values) {
+      rows.push(Object.fromEntries(cols.map((c, i) => [c, row[i]])));
+    }
+  }
   return { rows, total, page, pageSize };
 }
 
-function count(table, where = '', params = []) {
+async function count(table, where = '', params = []) {
+  const db = await getDb();
   const w = where ? `WHERE ${where}` : '';
-  return getDb().prepare(`SELECT COUNT(*) as count FROM ${table} ${w}`).get(...params).count;
+  const result = db.exec(`SELECT COUNT(*) as count FROM ${table} ${w}`, params);
+  return result[0]?.values[0]?.[0] || 0;
 }
 
-module.exports = { getDb, initDatabase, createTable, insert, update, remove, findById, findAll, count };
+module.exports = { getDb, initDatabase, createTable, insert, update, remove, findById, findAll, count, saveDb };
